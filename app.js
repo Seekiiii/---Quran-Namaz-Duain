@@ -2726,11 +2726,7 @@ function renderAboutContent(){
 
     <h3>Disclaimer</h3>
     <p>Yeh app kisi khaas maktab-e-fikr se mansoob nahi — tamam Muslims ke liye banayi gayi hai. Fiqhi masail (jese Asr ka waqt) mein aap apne fiqh ke mutabiq Settings se intekhab kar sakte hain.</p>
-  `;
-}
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
     navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
-  });
-}
