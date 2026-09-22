@@ -1,0 +1,27 @@
+{
+  "id": "./",
+  "name": "دین آسان — Quran, Namaz, Duain",
+  "short_name": "Deen Aasan",
+  "description": "Quran with Uthmani & IndoPak scripts, Urdu & English translation, tilawat, namaz timings, Qibla, and daily duas.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FBF6EC",
+  "theme_color": "#0B5A16",
+  "lang": "ur",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshot-home.png",
+      "sizes": "1284x2778",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "categories": ["education", "lifestyle"]
+}
