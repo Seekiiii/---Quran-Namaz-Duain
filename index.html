@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>دین آسان — Quran, Namaz &amp; Duain</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B5A16">
+<meta name="description" content="Quran with Urdu &amp; English translation, prayer times, Qibla direction, duas, tasbeeh counter aur bohot kuch — Deen Aasan app.">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;600;700&family=Noto+Nastaliq+Urdu:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<!-- Firebase — used only for the "Local Masjid Times" community feature.
+     Replace FIREBASE_CONFIG below with your own project's config from the
+     Firebase Console (Project Settings > General > Your apps). Nothing else
+     in the app needs Firebase; if this isn't configured, that one screen
+     will simply show a friendly "not set up yet" message. -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="title-row">
+      <div>
+        <div class="app-title-ar">دین آسان</div>
+        <div class="app-title-en">Deen Aasan — Quran, Namaz, Duain</div>
+      </div>
+    </div>
+    <div class="date-strip" id="gregorianDate"></div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="home"><span class="icon">🏠</span>Home<span class="ur">ہوم</span></button>
+    <button class="tab-btn" data-tab="quran"><span class="icon">📖</span>Quran<span class="ur">قرآن</span></button>
+    <button class="tab-btn" data-tab="namaz"><span class="icon">🕌</span>Namaz<span class="ur">نماز</span></button>
+    <button class="tab-btn" data-tab="duas"><span class="icon">🤲</span>Duas<span class="ur">دعائیں</span></button>
+    <button class="tab-btn" data-tab="more"><span class="icon">⋯</span>More<span class="ur">مزید</span></button>
+  </nav>
+
+  <main>
+
+    <!-- ===================== HOME TAB ===================== -->
+    <section class="view active" id="view-home">
+      <div class="home-greeting">
+        <div class="hg-ar" id="homeGreetingAr">السَّلَامُ عَلَيْكُمْ</div>
+        <div class="hg-sub" id="homeGreetingDate"></div>
+      </div>
+
+      <div class="home-next-prayer" id="homeNextPrayerCard">
+        <div class="hnp-label">اگلی نماز کا وقت جاننے کے لیے لوکیشن سیٹ کریں</div>
+        <button class="btn btn-primary" id="homeSetLocationBtn" style="margin-top:10px;">نماز کے اوقات دیکھیں</button>
+      </div>
+
+      <div class="quick-grid">
+        <button class="quick-tile" data-goto="quran">
+          <span class="qt-icon">📖</span>
+          <span class="qt-en">Quran</span>
+          <span class="qt-ur">قرآن</span>
+        </button>
+        <button class="quick-tile" data-goto="namaz">
+          <span class="qt-icon">🕌</span>
+          <span class="qt-en">Namaz</span>
+          <span class="qt-ur">نماز</span>
+        </button>
+        <button class="quick-tile" data-goto="duas">
+          <span class="qt-icon">🤲</span>
+          <span class="qt-en">Duas</span>
+          <span class="qt-ur">دعائیں</span>
+        </button>
+        <button class="quick-tile" data-goto="more">
+          <span class="qt-icon">⋯</span>
+          <span class="qt-en">More</span>
+          <span class="qt-ur">مزید</span>
+        </button>
+      </div>
+
+      <div class="section-head" style="margin-top:22px;">
+        <h2>Name of Allah — Today</h2>
+        <span class="ur-h">اسمِ الہیٰ</span>
+      </div>
+      <div class="asma-card" id="asmaCard"></div>
+    </section>
+
+    <!-- ===================== QURAN TAB ===================== -->
+    <section class="view" id="view-quran">
+
+      <div id="surahListWrap">
+        <div class="section-head">
+          <h2>Surahs</h2>
+          <span class="ur-h">سورتیں</span>
+        </div>
+        <p class="hint">Kisi bhi surah par tap karein — Arabic text, Urdu aur English tarjuma sath dikhega.</p>
+        <div id="surahGrid" class="loading">سورتیں لوڈ ہو رہی ہیں... Loading surahs…</div>
+      </div>
+
+      <div id="surahDetailWrap" style="display:none;">
+        <button class="back-btn" id="backToSurahs">&#8592; تمام سورتیں (All Surahs)</button>
+        <div class="audio-bar">
+          <select id="scriptSelect">
+            <option value="uthmani">رسم عثمانی — Arabic (Madani)</option>
+            <option value="indopak">سادہ — IndoPak</option>
+          </select>
+        </div>
+        <div class="audio-bar">
+          <select id="reciterSelect">
+            <option value="ar.alafasy">مشاری راشد العفاسی — Mishary Alafasy</option>
+            <option value="ar.abdulbasitmurattal">عبد الباسط — Abdul Basit</option>
+            <option value="ar.husary">محمود خلیل الحصری — Al-Husary</option>
+            <option value="ar.abdurrahmaansudais">عبدالرحمن السدیس — As-Sudais</option>
+          </select>
+          <button class="btn btn-primary" id="playSurahBtn">▶ پوری سورت سنیں</button>
+        </div>
+        <div id="surahBanner"></div>
+        <div id="ayahsList" class="loading">لوڈ ہو رہا ہے...</div>
+      </div>
+
+    </section>
+
+    <!-- ===================== NAMAZ TAB ===================== -->
+    <section class="view" id="view-namaz">
+      <div class="section-head">
+        <h2>Prayer Times</h2>
+        <span class="ur-h">نماز کے اوقات</span>
+      </div>
+      <p class="hint">Duniya ke kisi bhi mulk aur shehar ka naam likhein, ya "میری لوکیشن" button se automatic waqt maloom karein.</p>
+
+      <div class="namaz-form">
+        <div class="field-row">
+          <div class="field">
+            <label for="cityInput">City / شہر</label>
+            <input type="text" id="cityInput" placeholder="e.g. Rawalpindi, Lahore, Karachi, London...">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="countrySelect">Country / ملک</label>
+            <select id="countrySelect">
+              <option value="">— Select Country (or type below) —</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="countryInputManual">Country (agar list mein nahi hai) / Type manually</label>
+            <input type="text" id="countryInputManual" placeholder="e.g. Pakistan, Saudi Arabia, USA...">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="getTimingsBtn">اوقات معلوم کریں (Get Timings)</button>
+          <button class="btn btn-ghost" id="useLocationBtn">📍 میری لوکیشن</button>
+        </div>
+      </div>
+
+      <div id="timingsResult"></div>
+    </section>
+
+    <!-- ===================== DUAS TAB ===================== -->
+    <section class="view" id="view-duas">
+      <div class="section-head">
+        <h2>Daily Duas</h2>
+        <span class="ur-h">روزانہ کی دعائیں</span>
+      </div>
+      <p class="hint">Kisi bhi dua par tap karein — Arabic, talaffuz (transliteration), Urdu aur English tarjuma khulega.</p>
+      <div id="duasList"></div>
+    </section>
+
+    <!-- ===================== MORE TAB ===================== -->
+    <section class="view" id="view-more">
+      <div class="section-head">
+        <h2>More</h2>
+        <span class="ur-h">مزید</span>
+      </div>
+      <div class="more-list">
+        <div class="more-item" id="openTasbeehBtn">
+          <span class="mi-icon">📿</span>
+          <div class="mi-text"><div class="mi-en">Tasbeeh Counter</div><div class="mi-ur">تسبیح کاؤنٹر</div></div>
+          <span class="mi-arrow">→</span>
+        </div>
+        <div class="more-item" id="openQiblaBtn">
+          <span class="mi-icon">🧭</span>
+          <div class="mi-text"><div class="mi-en">Qibla Direction</div><div class="mi-ur">قبلہ رخ</div></div>
+          <span class="mi-arrow">→</span>
+        </div>
+        <div class="more-item" id="openHijriBtn">
+          <span class="mi-icon">📅</span>
+          <div class="mi-text"><div class="mi-en">Hijri Calendar</div><div class="mi-ur">اسلامی کیلنڈر</div></div>
+          <span class="mi-arrow">→</span>
+        </div>
+        <div class="more-item" id="openZakatBtn">
+          <span class="mi-icon">💰</span>
+          <div class="mi-text"><div class="mi-en">Zakat Calculator</div><div class="mi-ur">زکوٰۃ کیلکولیٹر</div></div>
+          <span class="mi-arrow">→</span>
+        </div>
+        <div class="more-item" id="openQazaBtn">
+          <span class="mi-icon">⏰</span>
+          <div class="mi-text"><div class="mi-en">Qaza Namaz Tracker</div><div class="mi-ur">قضا نمازوں کا حساب</div></div>
+          <span class="mi-arrow">→</span>
+        </div>
+        <div class="more-item" id="openMasjidBtn">
+          <span class="mi-icon">🕌</span>
+          <div class="mi-text"><div class="mi-en">Local Masjid Times</div><div class="mi-ur">قریبی مساجد کے اوقات</div></div>
+          <span class="mi-arrow">→</span>
+        </div>
+        <div class="more-item" id="openKhatmBtn">
+          <span class="mi-icon">👥</span>
+          <div class="mi-text"><div class="mi-en">Group Khatm Tracker</div><div class="mi-ur">اجتماعی ختم قرآن</div></div>
+          <span class="mi-arrow">→</span>
+        </div>
+        <div class="more-item" id="openMoodBtn">
+          <span class="mi-icon">💚</span>
+          <div class="mi-text"><div class="mi-en">Dil ki Kaifiyat</div><div class="mi-ur">دل کی کیفیت کے مطابق</div></div>
+          <span class="mi-arrow">→</span>
+        </div>
+        <div class="more-item" id="openNazraBtn">
+          <span class="mi-icon">🔤</span>
+          <div class="mi-text"><div class="mi-en">Nazra — Arabic Harf</div><div class="mi-ur">بچوں کے لیے ناظرہ</div></div>
+          <span class="mi-arrow">→</span>
+        </div>
+        <div class="more-item" id="openParentBtn">
+          <span class="mi-icon">👨‍👩‍👧</span>
+          <div class="mi-text"><div class="mi-en">Parent Dashboard</div><div class="mi-ur">والدین کا ڈیش بورڈ</div></div>
+          <span class="mi-arrow">→</span>
+        </div>
+        <div class="more-item" id="openStoriesBtn">
+          <span class="mi-icon">📖</span>
+          <div class="mi-text"><div class="mi-en">Bedtime Stories</div><div class="mi-ur">سونے کے وقت کی کہانیاں</div></div>
+          <span class="mi-arrow">→</span>
+        </div>
+        <div class="more-item" id="openStreakBtn">
+          <span class="mi-icon">🔥</span>
+          <div class="mi-text"><div class="mi-en">Deen Streak</div><div class="mi-ur">روزانہ کا تسلسل</div></div>
+          <span class="mi-arrow">→</span>
+        </div>
+        <div class="more-item" id="openCharityBtn">
+          <span class="mi-icon">🤝</span>
+          <div class="mi-text"><div class="mi-en">Charity Directory</div><div class="mi-ur">مستند خیراتی ادارے</div></div>
+          <span class="mi-arrow">→</span>
+        </div>
+        <div class="more-item" id="openKalimayBtn">
+          <span class="mi-icon">☪️</span>
+          <div class="mi-text"><div class="mi-en">Kalimay</div><div class="mi-ur">چھ کلمے</div></div>
+          <span class="mi-arrow">→</span>
+        </div>
+        <div class="more-item" id="openAsmaBtn">
+          <span class="mi-icon">✨</span>
+          <div class="mi-text"><div class="mi-en">99 Names of Allah</div><div class="mi-ur">اسماء الحسنیٰ</div></div>
+          <span class="mi-arrow">→</span>
+        </div>
+        <div class="more-item" id="openRamadanBtn">
+          <span class="mi-icon">🌙</span>
+          <div class="mi-text"><div class="mi-en">Ramadan — Sehri/Iftar</div><div class="mi-ur">رمضان — سحری و افطار</div></div>
+          <span class="mi-arrow">→</span>
+        </div>
+        <div class="more-item" id="openGuideBtn">
+          <span class="mi-icon">📘</span>
+          <div class="mi-text"><div class="mi-en">Wudu &amp; Namaz Guide</div><div class="mi-ur">وضو اور نماز کا طریقہ</div></div>
+          <span class="mi-arrow">→</span>
+        </div>
+        <div class="more-item" id="openFavoritesBtn">
+          <span class="mi-icon">⭐</span>
+          <div class="mi-text"><div class="mi-en">Favorites</div><div class="mi-ur">پسندیدہ دعائیں</div></div>
+          <span class="mi-arrow">→</span>
+        </div>
+        <div class="more-item" id="openSettingsBtn">
+          <span class="mi-icon">⚙️</span>
+          <div class="mi-text"><div class="mi-en">Settings</div><div class="mi-ur">ترتیبات</div></div>
+          <span class="mi-arrow">→</span>
+        </div>
+        <div class="more-item" id="openAboutBtn">
+          <span class="mi-icon">ℹ️</span>
+          <div class="mi-text"><div class="mi-en">About &amp; Privacy Policy</div><div class="mi-ur">ایپ کے بارے میں</div></div>
+          <span class="mi-arrow">→</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== QIBLA SUB-VIEW ===================== -->
+    <section class="view" id="view-qibla">
+      <button class="back-btn" id="backFromQibla">&#8592; مزید (More)</button>
+      <div class="section-head">
+        <h2>Qibla Direction</h2>
+        <span class="ur-h">قبلہ رخ</span>
+      </div>
+      <p class="hint">Location aur compass sensor ki madad se Kaaba ki taraf rukh maloom karein. Phone ko flat pakrein aur figure-8 mein ghumayein agar sui theek na dikhe (calibration).</p>
+
+      <div id="qiblaStart">
+        <button class="btn btn-primary" id="findQiblaBtn" style="width:100%;">📍 قبلہ معلوم کریں (Find Qibla)</button>
+      </div>
+
+      <div id="qiblaResult" style="display:none;">
+        <div class="qibla-info" id="qiblaInfoText"></div>
+        <div class="compass-wrap">
+          <div class="compass-frame">
+            <div class="compass-rose" id="compassRose">
+              <span class="cr-n">N</span><span class="cr-e">E</span><span class="cr-s">S</span><span class="cr-w">W</span>
+              <div class="qibla-arrow" id="qiblaArrow">🕋</div>
+            </div>
+            <div class="compass-center-dot"></div>
+          </div>
+        </div>
+        <p class="hint" id="compassStatusText" style="text-align:center;"></p>
+      </div>
+    </section>
+
+    <!-- ===================== HIJRI CALENDAR SUB-VIEW ===================== -->
+    <section class="view" id="view-hijri">
+      <button class="back-btn" id="backFromHijri">&#8592; مزید (More)</button>
+      <div class="section-head">
+        <h2>Hijri Calendar</h2>
+        <span class="ur-h">اسلامی کیلنڈر</span>
+      </div>
+
+      <div class="hijri-nav">
+        <button class="hijri-nav-btn" id="hijriPrevBtn">&#8592;</button>
+        <div class="hijri-nav-title">
+          <div class="hnt-hijri" id="hijriMonthTitle">—</div>
+          <div class="hnt-greg" id="gregMonthTitle">—</div>
+        </div>
+        <button class="hijri-nav-btn" id="hijriNextBtn">&#8594;</button>
+      </div>
+
+      <div class="hijri-weekdays">
+        <span>اتوار</span><span>پیر</span><span>منگل</span><span>بدھ</span><span>جمعرات</span><span>جمعہ</span><span>ہفتہ</span>
+      </div>
+      <div class="hijri-grid" id="hijriGrid">
+        <div class="loading">لوڈ ہو رہا ہے...</div>
+      </div>
+
+      <div class="hijri-legend">
+        <span><span class="dot dot-today"></span> آج</span>
+        <span><span class="dot dot-event"></span> اہم تاریخ</span>
+      </div>
+    </section>
+
+    <!-- ===================== ZAKAT CALCULATOR SUB-VIEW ===================== -->
+    <section class="view" id="view-zakat">
+      <button class="back-btn" id="backFromZakat">&#8592; مزید (More)</button>
+      <div class="section-head">
+        <h2>Zakat Calculator</h2>
+        <span class="ur-h">زکوٰۃ کیلکولیٹر</span>
+      </div>
+      <p class="hint">Apne maal ki tafseel daal kar zakat ka andaza lagayein. Yeh sirf rehnumai ke liye hai — hisaab pukhta karne se pehle apne mufti/aalim se mashwara zaroor karein.</p>
+
+      <div class="namaz-form">
+        <div class="field-row">
+          <div class="field">
+            <label for="nisabBasis">نصاب کی بنیاد — Nisab basis</label>
+            <select id="nisabBasis">
+              <option value="silver">چاندی (Silver — 612.36g) — ehtiyaat wala, is par zyada log zakat ke mustahiq bante hain</option>
+              <option value="gold">سونا (Gold — 87.48g)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="goldPricePerGram">سونے کی موجودہ قیمت فی گرام (Gold price / gram)</label>
+            <input type="number" id="goldPricePerGram" placeholder="e.g. 25000" inputmode="decimal">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="silverPricePerGram">چاندی کی موجودہ قیمت فی گرام (Silver price / gram)</label>
+            <input type="number" id="silverPricePerGram" placeholder="e.g. 320" inputmode="decimal">
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--line);margin:16px 0;">
+
+        <div class="field-row">
+          <div class="field">
+            <label for="zCash">نقدی — گھر اور بینک میں (Cash — home + bank)</label>
+            <input type="number" id="zCash" placeholder="0" inputmode="decimal">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="zGoldGrams">سونا — کل وزن گرام میں (Gold you own — grams)</label>
+            <input type="number" id="zGoldGrams" placeholder="0" inputmode="decimal">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="zSilverGrams">چاندی — کل وزن گرام میں (Silver you own — grams)</label>
+            <input type="number" id="zSilverGrams" placeholder="0" inputmode="decimal">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="zBusiness">کاروباری مال / اسٹاک (Business inventory / stock value)</label>
+            <input type="number" id="zBusiness" placeholder="0" inputmode="decimal">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="zInvestments">سرمایہ کاری / منافع بخش رقم (Investments / savings)</label>
+            <input type="number" id="zInvestments" placeholder="0" inputmode="decimal">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="zReceivables">دوسروں سے واپس لینی ہے (Money owed to you, expected back)</label>
+            <input type="number" id="zReceivables" placeholder="0" inputmode="decimal">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="zDebts">آپ پر قرض ہے (Debts / liabilities you owe)</label>
+            <input type="number" id="zDebts" placeholder="0" inputmode="decimal">
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" id="calcZakatBtn">حساب کریں (Calculate Zakat)</button>
+        </div>
+      </div>
+
+      <div id="zakatResult"></div>
+    </section>
+
+    <!-- ===================== QAZA NAMAZ TRACKER SUB-VIEW ===================== -->
+    <section class="view" id="view-qaza">
+      <button class="back-btn" id="backFromQaza">&#8592; مزید (More)</button>
+      <div class="section-head">
+        <h2>Qaza Namaz Tracker</h2>
+        <span class="ur-h">قضا نمازوں کا حساب</span>
+      </div>
+      <p class="hint">Jo namazein qaza ho chuki hain un ka hisaab rakhein. Jab yaad aaye ke koi namaz reh gayi hai to "+" dabayein, aur jab qaza ada kar lein to "–" dabayein.</p>
+
+      <div class="qaza-list" id="qazaList"></div>
+
+      <div class="qaza-total" id="qazaTotal"></div>
+
+      <div class="btn-row" style="margin-top:16px;">
+        <button class="btn btn-ghost" id="qazaResetBtn">↺ Sab Reset Karein</button>
+      </div>
+    </section>
+
+    <!-- ===================== LOCAL MASJID TIMES SUB-VIEW ===================== -->
+    <section class="view" id="view-masjid">
+      <button class="back-btn" id="backFromMasjid">&#8592; مزید (More)</button>
+      <div class="section-head">
+        <h2>Local Masjid Times</h2>
+        <span class="ur-h">قریبی مساجد کے اوقات</span>
+      </div>
+      <p class="hint">Yeh waqt hamare aam calculation se nahi, balke asal masjidon ke log khud daalte hain — is liye zyada asal (accurate) ho sakte hain.</p>
+
+      <div class="namaz-form">
+        <div class="field-row">
+          <div class="field">
+            <label for="masjidCitySearch">Shehar / Ilaqa (City / Area)</label>
+            <input type="text" id="masjidCitySearch" placeholder="e.g. Rawalpindi, Model Town...">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="searchMasjidBtn">🔍 Dhoondein</button>
+          <button class="btn btn-ghost" id="addMasjidBtn">➕ Apni Masjid Add Karein</button>
+        </div>
+      </div>
+
+      <div id="masjidList"></div>
+
+      <!-- Add Masjid Form (hidden by default) -->
+      <div id="addMasjidForm" style="display:none;">
+        <div class="section-head" style="margin-top:20px;">
+          <h2>Add Masjid</h2>
+          <span class="ur-h">نئی مسجد شامل کریں</span>
+        </div>
+        <div class="namaz-form">
+          <div class="field-row">
+            <div class="field">
+              <label for="newMasjidName">Masjid ka Naam</label>
+              <input type="text" id="newMasjidName" placeholder="e.g. Jamia Masjid Ghausia">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="newMasjidCity">Shehar / Ilaqa</label>
+              <input type="text" id="newMasjidCity" placeholder="e.g. Rawalpindi, Satellite Town">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="newMasjidFajr">فجر Iqamah</label><input type="text" id="newMasjidFajr" placeholder="e.g. 05:15 AM"></div>
+            <div class="field"><label for="newMasjidDhuhr">ظہر Iqamah</label><input type="text" id="newMasjidDhuhr" placeholder="e.g. 01:30 PM"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="newMasjidAsr">عصر Iqamah</label><input type="text" id="newMasjidAsr" placeholder="e.g. 05:00 PM"></div>
+            <div class="field"><label for="newMasjidMaghrib">مغرب Iqamah</label><input type="text" id="newMasjidMaghrib" placeholder="e.g. sunset+5min"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="newMasjidIsha">عشاء Iqamah</label><input type="text" id="newMasjidIsha" placeholder="e.g. 08:00 PM"></div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="submitMasjidBtn">Shamil Karein</button>
+            <button class="btn btn-ghost" id="cancelMasjidBtn">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== GROUP KHATM TRACKER SUB-VIEW ===================== -->
+    <section class="view" id="view-khatm">
+      <button class="back-btn" id="backFromKhatm">&#8592; مزید (More)</button>
+      <div class="section-head">
+        <h2>Group Khatm Tracker</h2>
+        <span class="ur-h">اجتماعی ختم قرآن</span>
+      </div>
+
+      <!-- Entry screen: create or join -->
+      <div id="khatmEntryWrap">
+        <p class="hint">Family, dost, ya mohalle ke sath mil kar 30 Para baant kar Quran khatam karein — sab ki progress ek hi jagah nazar aayegi.</p>
+
+        <div class="namaz-form">
+          <div class="field-row">
+            <div class="field">
+              <label for="newKhatmName">Naya Group Banayein (Group ka naam)</label>
+              <input type="text" id="newKhatmName" placeholder="e.g. Ahmed Family Khatm">
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="createKhatmBtn" style="width:100%;">➕ Naya Group Banayein</button>
+          </div>
+        </div>
+
+        <div class="namaz-form" style="margin-top:14px;">
+          <div class="field-row">
+            <div class="field">
+              <label for="joinKhatmCode">Group Code se Shamil Hon</label>
+              <input type="text" id="joinKhatmCode" placeholder="e.g. AB12CD" style="text-transform:uppercase;">
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-ghost" id="joinKhatmBtn" style="width:100%;">🔑 Group Join Karein</button>
+          </div>
+        </div>
+
+        <div id="myKhatmGroupsWrap"></div>
+      </div>
+
+      <!-- Group detail screen -->
+      <div id="khatmGroupWrap" style="display:none;">
+        <button class="back-btn" id="backFromKhatmGroup">&#8592; Mere Groups</button>
+        <div class="khatm-group-card">
+          <div class="kg-name" id="khatmGroupName"></div>
+          <div class="kg-code">Group Code: <b id="khatmGroupCode"></b> <button class="khatm-share-btn" id="khatmShareBtn">Share</button></div>
+          <div class="kg-progress-bar"><div class="kg-progress-fill" id="khatmProgressFill"></div></div>
+          <div class="kg-progress-text" id="khatmProgressText"></div>
+        </div>
+        <div class="khatm-para-grid" id="khatmParaGrid"></div>
+      </div>
+    </section>
+
+    <!-- ===================== DIL KI KAIFIYAT (MOOD) SUB-VIEW ===================== -->
+    <section class="view" id="view-mood">
+      <button class="back-btn" id="backFromMood">&#8592; مزید (More)</button>
+      <div class="section-head">
+        <h2>Dil ki Kaifiyat</h2>
+        <span class="ur-h">دل کی کیفیت کے مطابق</span>
+      </div>
+
+      <div id="moodPickerWrap">
+        <p class="hint">Abhi dil kaisa mehsoos kar raha hai? Chunein, aur us ke mutabiq ek ayat ya dua aur chhota sa paigham milega.</p>
+        <div class="mood-grid" id="moodGrid"></div>
+      </div>
+
+      <div id="moodResultWrap" style="display:none;">
+        <button class="back-btn" id="backFromMoodResult">&#8592; Dobara Chunein</button>
+        <div class="mood-result-card" id="moodResultCard"></div>
+      </div>
+    </section>
+
+    <!-- ===================== NAZRA (ARABIC HARF) SUB-VIEW ===================== -->
+    <section class="view" id="view-nazra">
+      <button class="back-btn" id="backFromNazra">&#8592; مزید (More)</button>
+      <div class="section-head">
+        <h2>Nazra — Arabic Harf</h2>
+        <span class="ur-h">بچوں کے لیے ناظرہ</span>
+      </div>
+      <p class="hint">Seekh liya hua harf par tap karein taake ✓ ho jaye aur yaad rahe kaun se huroof mukammal ho chuke hain.</p>
+      <div class="masjid-notice" style="margin-bottom:16px;">
+        🔊 Sab ke 29 huroof ki asal (khud record ki hui) awaz mukammal ho chuki hai — 🔊 icon par tap kar ke sunein.
+      </div>
+
+      <div class="nazra-progress-bar"><div class="nazra-progress-fill" id="nazraProgressFill"></div></div>
+      <div class="nazra-progress-text" id="nazraProgressText"></div>
+
+      <div class="nazra-grid" id="nazraGrid"></div>
+    </section>
+
+    <!-- ===================== PARENT DASHBOARD SUB-VIEW ===================== -->
+    <section class="view" id="view-parent">
+      <button class="back-btn" id="backFromParent">&#8592; مزید (More)</button>
+      <div class="section-head">
+        <h2>Parent Dashboard</h2>
+        <span class="ur-h">والدین کا ڈیش بورڈ</span>
+      </div>
+      <p class="hint">Is phone par app ki activity ka khulasa — Nazra, Tasbeeh, Namaz aur Streak sab ek jagah.</p>
+
+      <div class="parent-grid" id="parentGrid"></div>
+    </section>
+
+    <!-- ===================== BEDTIME STORIES SUB-VIEW ===================== -->
+    <section class="view" id="view-stories">
+      <button class="back-btn" id="backFromStories">&#8592; مزید (More)</button>
+      <div id="storiesListWrap">
+        <div class="section-head">
+          <h2>Bedtime Stories</h2>
+          <span class="ur-h">سونے کے وقت کی کہانیاں</span>
+        </div>
+        <p class="hint">Nabiyon aur Sahaba ke qissay — bachon ke sath sunein ya padhein.</p>
+        <div class="stories-list" id="storiesList"></div>
+      </div>
+      <div id="storyDetailWrap" style="display:none;">
+        <button class="back-btn" id="backFromStoryDetail">&#8592; تمام کہانیاں</button>
+        <div class="story-detail-card" id="storyDetailCard"></div>
+      </div>
+    </section>
+
+    <!-- ===================== DEEN STREAK SUB-VIEW ===================== -->
+    <section class="view" id="view-streak">
+      <button class="back-btn" id="backFromStreak">&#8592; مزید (More)</button>
+      <div class="section-head">
+        <h2>Deen Streak</h2>
+        <span class="ur-h">روزانہ کا تسلسل</span>
+      </div>
+
+      <div class="streak-card">
+        <div class="streak-flame" id="streakFlame">🔥</div>
+        <div class="streak-num" id="streakNum">0</div>
+        <div class="streak-label">دن مسلسل</div>
+        <div class="streak-best" id="streakBest"></div>
+      </div>
+
+      <div class="streak-week" id="streakWeek"></div>
+
+      <div class="btn-row" style="margin-top:18px;">
+        <button class="btn btn-primary" id="markTodayBtn" style="width:100%;">آج کا عمل مکمل — Mark Today Done</button>
+      </div>
+      <p class="hint" style="margin-top:10px;text-align:center;">Roz namaz, tilawat ya zikr karne ke baad "Mark Today Done" dabayein — tasalsul (streak) barhta rahega.</p>
+    </section>
+
+    <!-- ===================== CHARITY DIRECTORY SUB-VIEW ===================== -->
+    <section class="view" id="view-charity">
+      <button class="back-btn" id="backFromCharity">&#8592; مزید (More)</button>
+      <div class="section-head">
+        <h2>Charity Directory</h2>
+        <span class="ur-h">مستند خیراتی ادارے</span>
+      </div>
+      <p class="hint">Yeh Pakistan ke well-known, tasdeeq shuda khairaati idaray hain — direct un ki apni official website par ja kar Zakat/Sadqa/Donation de sakte hain. Yeh app khud koi paisa nahi leti, sirf rabta karwati hai.</p>
+      <div class="charity-list" id="charityList"></div>
+    </section>
+
+    <!-- ===================== KALIMAY SUB-VIEW ===================== -->
+    <section class="view" id="view-kalimay">
+      <button class="back-btn" id="backFromKalimay">&#8592; مزید (More)</button>
+      <div class="section-head">
+        <h2>The Six Kalimas</h2>
+        <span class="ur-h">چھ کلمے</span>
+      </div>
+      <div class="kalima-list" id="kalimayList"></div>
+    </section>
+
+    <!-- ===================== ASMA-UL-HUSNA SUB-VIEW ===================== -->
+    <section class="view" id="view-asma">
+      <button class="back-btn" id="backFromAsma">&#8592; مزید (More)</button>
+      <div class="section-head">
+        <h2>99 Names of Allah</h2>
+        <span class="ur-h">اسماء الحسنیٰ</span>
+      </div>
+      <div class="asma-list" id="asmaFullList"></div>
+    </section>
+
+    <!-- ===================== RAMADAN SUB-VIEW ===================== -->
+    <section class="view" id="view-ramadan">
+      <button class="back-btn" id="backFromRamadan">&#8592; مزید (More)</button>
+      <div class="section-head">
+        <h2>Ramadan — Sehri &amp; Iftar</h2>
+        <span class="ur-h">رمضان — سحری و افطار</span>
+      </div>
+      <div class="namaz-form">
+        <div class="field-row">
+          <div class="field">
+            <label for="ramadanCityInput">City / شہر</label>
+            <input type="text" id="ramadanCityInput" placeholder="e.g. Rawalpindi, Lahore, Karachi...">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="ramadanCountryInput">Country / ملک</label>
+            <input type="text" id="ramadanCountryInput" placeholder="e.g. Pakistan">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="getRamadanBtn" style="width:100%;">سحر و افطار معلوم کریں</button>
+        </div>
+      </div>
+      <div id="ramadanResult"></div>
+    </section>
+
+    <!-- ===================== WUDU & NAMAZ GUIDE SUB-VIEW ===================== -->
+    <section class="view" id="view-guide">
+      <button class="back-btn" id="backFromGuide">&#8592; مزید (More)</button>
+      <div id="guideListWrap">
+        <div class="section-head">
+          <h2>Wudu &amp; Namaz Guide</h2>
+          <span class="ur-h">وضو اور نماز کا طریقہ</span>
+        </div>
+        <p class="hint">Naye Muslims aur bachon ke liye — step-by-step, aasan alfaz mein.</p>
+        <div class="guide-topics" id="guideTopics"></div>
+      </div>
+      <div id="guideDetailWrap" style="display:none;">
+        <button class="back-btn" id="backFromGuideDetail">&#8592; تمام موضوعات</button>
+        <div id="guideDetailCard"></div>
+      </div>
+    </section>
+
+    <!-- ===================== FAVORITES SUB-VIEW ===================== -->
+    <section class="view" id="view-favorites">
+      <button class="back-btn" id="backFromFavorites">&#8592; مزید (More)</button>
+      <div class="section-head">
+        <h2>Favorites</h2>
+        <span class="ur-h">پسندیدہ دعائیں</span>
+      </div>
+      <p class="hint">Duas tab mein kisi bhi dua ke ⭐ button ko dabayein taake wo yahan shamil ho jaye.</p>
+      <div id="favoritesList"></div>
+    </section>
+
+    <!-- ===================== SETTINGS SUB-VIEW ===================== -->
+    <section class="view" id="view-settings">
+      <button class="back-btn" id="backFromSettings">&#8592; مزید (More)</button>
+      <div class="section-head">
+        <h2>Settings</h2>
+        <span class="ur-h">ترتیبات</span>
+      </div>
+
+      <div class="settings-row">
+        <div class="settings-label">
+          <div class="sl-en">Dark Mode</div>
+          <div class="sl-ur">ڈارک موڈ</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="darkModeToggle">
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+
+      <div class="settings-row" style="flex-direction:column;align-items:stretch;">
+        <div class="settings-label" style="margin-bottom:10px;">
+          <div class="sl-en">Font Size</div>
+          <div class="sl-ur">فونٹ کا سائز</div>
+        </div>
+        <div class="font-size-options">
+          <button class="fs-btn" data-size="small">A<span>چھوٹا</span></button>
+          <button class="fs-btn" data-size="medium">A<span>درمیانہ</span></button>
+          <button class="fs-btn" data-size="large">A<span>بڑا</span></button>
+        </div>
+      </div>
+
+      <div class="settings-row" style="flex-direction:column;align-items:stretch;">
+        <div class="settings-label" style="margin-bottom:10px;">
+          <div class="sl-en">Azan Notifications (jab app khuli ho)</div>
+          <div class="sl-ur">اذان کی یاد دہانی</div>
+        </div>
+        <button class="btn btn-primary" id="enableNotifBtn" style="width:100%;">🔔 Notifications On Karein</button>
+        <p class="hint" style="margin-top:8px;">Yeh yaad dahani sirf tab kaam karti hai jab app khuli/background mein ho — phone fully band karne par kaam nahi karegi.</p>
+      </div>
+
+      <div class="settings-row" style="flex-direction:column;align-items:stretch;">
+        <div class="settings-label" style="margin-bottom:10px;">
+          <div class="sl-en">Asr Calculation (Fiqh)</div>
+          <div class="sl-ur">عصر کا طریقہ (فقہ)</div>
+        </div>
+        <select id="globalFiqhSelect" class="fiqh-select">
+          <option value="0">Standard (Shafi/Maliki/Hanbali)</option>
+          <option value="1">Hanafi</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- ===================== ABOUT & PRIVACY SUB-VIEW ===================== -->
+    <section class="view" id="view-about">
+      <button class="back-btn" id="backFromAbout">&#8592; مزید (More)</button>
+      <div class="section-head">
+        <h2>About &amp; Privacy Policy</h2>
+        <span class="ur-h">ایپ کے بارے میں</span>
+      </div>
+      <div class="about-card" id="aboutContent"></div>
+    </section>
+
+    <section class="view" id="view-tasbeeh">
+      <button class="back-btn" id="backFromTasbeeh">&#8592; مزید (More)</button>
+
+      <div id="tasbeehListWrap">
+        <div class="section-head">
+          <h2>Tasbeeh Counter</h2>
+          <span class="ur-h">تسبیح کاؤنٹر</span>
+        </div>
+
+        <div class="tsb-subtabs">
+          <button class="tsb-subtab active" data-sub="popular">Popular<span class="ur">مقبول اذکار</span></button>
+          <button class="tsb-subtab" data-sub="mine">My Tasbeeh<span class="ur">میری تسبیح</span></button>
+        </div>
+
+        <div id="tsbPopularList"></div>
+        <div id="tsbMineList" style="display:none;"></div>
+      </div>
+
+      <div id="tasbeehCounterWrap" style="display:none;">
+        <button class="back-btn" id="backFromCounter">&#8592; فہرست (List)</button>
+        <div class="counter-card">
+          <div class="counter-ar" id="counterAr"></div>
+          <div class="counter-ur" id="counterUr"></div>
+          <div class="counter-number" id="counterNumber">0</div>
+          <button class="counter-tap" id="counterTapBtn">دبائیں<br><span style="font-size:11px;font-weight:400;">Tap</span></button>
+          <div class="counter-actions">
+            <button class="btn btn-ghost" id="counterResetBtn">↺ Reset</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+
+  <footer class="foot">
+    Quran text &amp; translations via AlQuran Cloud API &middot; Prayer times via Al-Adhan API
+  </footer>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
